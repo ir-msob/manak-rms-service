@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,9 +24,14 @@ public class GitService {
 
     private final GithubProviderService githubProviderService;
 
-    private final Map<String, GitProviderService> providers = Map.of(
-            "github", githubProviderService
-    );
+    private final Map<String, GitProviderService> providers = new HashMap<>();
+
+    private Map<String, GitProviderService> getProviders() {
+        if (providers.isEmpty()) {
+            this.providers.put("github", githubProviderService);
+        }
+        return providers;
+    }
 
     public Mono<InvokeResponse> invoke(InvokeRequest request, User user) {
         log.debug("Processing git tool: {} for user: {}", request.getToolId(), user.getId());
@@ -51,7 +57,7 @@ public class GitService {
     }
 
     private GitProviderService getProvider(String providerType) {
-        return Optional.ofNullable(providers.get(providerType))
+        return Optional.ofNullable(getProviders().get(providerType))
                 .orElseThrow(() -> new CommonRuntimeException("Provider not supported: " + providerType));
     }
 
