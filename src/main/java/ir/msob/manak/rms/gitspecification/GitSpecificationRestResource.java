@@ -5,9 +5,9 @@ import ir.msob.jima.core.commons.resource.Resource;
 import ir.msob.jima.core.commons.shared.ResourceType;
 import ir.msob.manak.core.service.jima.crud.restful.domain.service.DomainCrudRestResource;
 import ir.msob.manak.core.service.jima.security.UserService;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecification;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationCriteria;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationDto;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecification;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationCriteria;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationDto;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 

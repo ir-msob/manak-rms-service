@@ -1,7 +1,7 @@
 package ir.msob.manak.rms.gitspecification;
 
 import ir.msob.manak.core.test.jima.crud.base.childdomain.characteristic.BaseCharacteristicCrudDataProvider;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationDto;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationDto;
 import org.springframework.stereotype.Component;
 
 @Component

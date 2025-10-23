@@ -1,6 +1,6 @@
 package ir.msob.manak.rms.gitprovider;
 
-import ir.msob.manak.domain.model.git.dto.FileContentDto;
+import ir.msob.manak.domain.model.rms.dto.FileContentDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

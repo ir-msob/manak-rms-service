@@ -8,10 +8,10 @@ import ir.msob.jima.core.commons.shared.ResourceType;
 import ir.msob.jima.crud.api.kafka.client.ChannelUtil;
 import ir.msob.manak.core.service.jima.crud.kafka.domain.service.DomainCrudKafkaListener;
 import ir.msob.manak.core.service.jima.security.UserService;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecification;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationCriteria;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationDto;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationTypeReference;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecification;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationCriteria;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationDto;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationTypeReference;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.stereotype.Component;
 

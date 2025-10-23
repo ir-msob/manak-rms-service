@@ -2,10 +2,10 @@ package ir.msob.manak.rms.gitprovider.github;
 
 import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
 import ir.msob.manak.core.service.jima.security.UserService;
-import ir.msob.manak.domain.model.git.dto.FileContentDto;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecification;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationCriteria;
-import ir.msob.manak.domain.model.git.gitspecification.GitSpecificationDto;
+import ir.msob.manak.domain.model.rms.dto.FileContentDto;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecification;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationCriteria;
+import ir.msob.manak.domain.model.rms.gitspecification.GitSpecificationDto;
 import ir.msob.manak.rms.gitprovider.GitProviderService;
 import ir.msob.manak.rms.gitspecification.GitSpecificationService;
 import lombok.RequiredArgsConstructor;
