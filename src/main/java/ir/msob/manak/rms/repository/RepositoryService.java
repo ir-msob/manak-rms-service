@@ -11,10 +11,13 @@ import ir.msob.manak.core.service.jima.service.IdService;
 import ir.msob.manak.domain.model.rms.repository.Repository;
 import ir.msob.manak.domain.model.rms.repository.RepositoryCriteria;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
+import ir.msob.manak.rms.gitprovider.GitProviderService;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Collection;
@@ -26,11 +29,13 @@ public class RepositoryService extends DomainCrudService<Repository, RepositoryD
 
     private final ModelMapper modelMapper;
     private final IdService idService;
+    private final GitProviderService gitProviderService;
 
-    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService) {
+    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService, GitProviderService gitProviderServiceb) {
         super(beforeAfterComponent, objectMapper, repository);
         this.modelMapper = modelMapper;
         this.idService = idService;
+        this.gitProviderService = gitProviderServiceb;
     }
 
     @Override
@@ -63,5 +68,20 @@ public class RepositoryService extends DomainCrudService<Repository, RepositoryD
     @Override
     public BaseIdService getIdService() {
         return idService;
+    }
+
+    @Transactional
+    public Flux<DataBuffer> downloadBranch(String id, String branch, User user) {
+
+        return getDto(id, user)
+                .flatMapMany(repositoryDto -> {
+                    String finalBranch = getBranch(repositoryDto,branch);
+                    String repoPath = prepareRepoPath(repositoryDto);
+                    return gitProviderService.getBranch(repoPath, branch);
+                });
+    }
+
+    private String prepareRepoPath(RepositoryDto repositoryDto) {
+        return repositoryDto.getSpecification().getBaseUrl() + "/" + repositoryDto.getPath();
     }
 }
