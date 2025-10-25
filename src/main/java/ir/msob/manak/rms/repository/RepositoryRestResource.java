@@ -18,9 +18,11 @@ import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
@@ -42,7 +44,7 @@ public class RepositoryRestResource extends DomainCrudRestResource<Repository, R
     }
 
 
-    @PostMapping({"{id}/branch/{branch}/download", "{id}/download"})
+    @GetMapping({"{id}/branch/{branch}/download", "{id}/download"})
     @ApiResponses(value = {@ApiResponse(code = 200, message = "Return a domain or null"),
             @ApiResponse(code = 400, message = "If the validation operation is incorrect throws BadRequestException otherwise nothing", response = BadRequestResponse.class)})
     @Scope(operation = Operations.SAVE)
@@ -51,7 +53,10 @@ public class RepositoryRestResource extends DomainCrudRestResource<Repository, R
         log.debug("REST request to download branch {}, id {}", branch, id);
         User user = getUser(principal);
         Flux<DataBuffer> res = this.getService().downloadBranch(id, branch, user);
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\""+branch+".zip\"")
+                .body(res);
     }
 
 }

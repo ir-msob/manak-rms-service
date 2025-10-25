@@ -20,9 +20,7 @@ import static ir.msob.jima.core.commons.operation.Operations.*;
 @Component
 @ConditionalOnOperation(operations = {SAVE, UPDATE_BY_ID, DELETE_BY_ID})
 @Resource(value = Repository.DOMAIN_NAME_WITH_HYPHEN, type = ResourceType.KAFKA)
-public class RepositoryKafkaListener
-        extends DomainCrudKafkaListener<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository, RepositoryService>
-        implements RepositoryTypeReference {
+public class RepositoryKafkaListener extends DomainCrudKafkaListener<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository, RepositoryService> implements RepositoryTypeReference {
     public static final String BASE_URI = ChannelUtil.getBaseChannel(RepositoryDto.class);
 
     protected RepositoryKafkaListener(UserService userService, RepositoryService service, ObjectMapper objectMapper, ConsumerFactory<String, String> consumerFactory, BaseAsyncClient asyncClient) {

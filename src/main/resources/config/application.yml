@@ -1,5 +1,8 @@
 server:
-  port: 8080
+  port: 8587
+  error:
+    include-message: always
+    include-binding-errors: always
 
 spring:
   application:
@@ -30,7 +33,7 @@ spring:
     oauth2:
       resource-server:
         jwt:
-          issuer-uri: http://localhost:9090/realms/test-realm
+          issuer-uri: http://localhost:8181/realms/test-realm
       client:
         provider:
           service-client:
@@ -48,3 +51,14 @@ jima:
   feature:
     database-type: mongo
     database-enabled: true
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.validation: TRACE
+    org.springframework.http.converter: TRACE
+    org.springframework.web.servlet.mvc.method.annotation: TRACE
+    org.springframework.http.codec.json: TRACE
+    org.springframework.http.codec.json.Jackson2JsonDecoder: TRACE
+    org.springframework.web.reactive.function.server.support.ServerRequestReader: TRACE
+    org.springframework.web.reactive.result.method.annotation.RequestBodyMethodArgumentResolver: TRACE
