@@ -1,7 +1,6 @@
 package ir.msob.manak.rms.repository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
 import ir.msob.jima.core.commons.id.BaseIdService;
 import ir.msob.jima.core.commons.operation.BaseBeforeAfterDomainOperation;
 import ir.msob.jima.crud.service.domain.BeforeAfterComponent;
@@ -12,11 +11,12 @@ import ir.msob.manak.core.service.jima.service.IdService;
 import ir.msob.manak.domain.model.rms.repository.Repository;
 import ir.msob.manak.domain.model.rms.repository.RepositoryCriteria;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
-import ir.msob.manak.domain.model.rms.repository.branch.Branch;
-import ir.msob.manak.rms.gitprovider.GitProviderService;
+import ir.msob.manak.rms.gitprovider.GitProviderHubService;
+import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
-import org.apache.logging.log4j.util.Strings;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,18 +27,20 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Service
-public class RepositoryService extends DomainCrudService<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository>
+public class RepositoryService
+        extends DomainCrudService<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository>
         implements ChildDomainCrudService<RepositoryDto> {
+    private final GitProviderHubService gitProviderHubService;
 
     private final ModelMapper modelMapper;
     private final IdService idService;
-    private final GitProviderService gitProviderService;
+    private final Logger log = LoggerFactory.getLogger(RepositoryService.class);
 
-    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService, GitProviderService gitProviderServiceb) {
+    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService, GitProviderHubService gitProviderHubService) {
         super(beforeAfterComponent, objectMapper, repository);
         this.modelMapper = modelMapper;
         this.idService = idService;
-        this.gitProviderService = gitProviderServiceb;
+        this.gitProviderHubService = gitProviderHubService;
     }
 
     @Override
@@ -74,30 +76,27 @@ public class RepositoryService extends DomainCrudService<Repository, RepositoryD
     }
 
     @Transactional
-    public Flux<DataBuffer> downloadBranch(String id, String branch, User user) {
+    public Flux<DataBuffer> downloadBranch(String id, @Nullable String branch, User user) {
+        log.info("🔹 Starting downloadBranch for repository id={} and branch={} by user={}", id, branch, user.getUsername());
 
         return getDto(id, user)
                 .flatMapMany(repositoryDto -> {
-                    String finalBranch = getBranch(repositoryDto, branch);
-                    return gitProviderService.getBranch(repositoryDto, finalBranch, user);
-                });
+                    String finalBranch = gitProviderHubService.getBranch(repositoryDto, branch);
+                    String repositoryPath = gitProviderHubService.getRepositoryPath(repositoryDto);
+                    String token = gitProviderHubService.getToken(repositoryDto);
+
+                    log.debug("📦 Repository info -> path={}, finalBranch={}, provider={}",
+                            repositoryPath, finalBranch, repositoryDto.getSpecification().getName());
+
+                    return gitProviderHubService.getProvider(repositoryDto)
+                            .downloadBranch(repositoryPath, finalBranch, token, user)
+                            .doOnSubscribe(s -> log.info("⬇️  Download started for repo={}, branch={}", repositoryPath, finalBranch))
+                            .doOnNext(buffer -> log.trace("📄 Received data chunk of size={} bytes", buffer.readableByteCount()))
+                            .doOnError(e -> log.error("❌ Error downloading branch {} from repo {}: {}", finalBranch, repositoryPath, e.getMessage(), e))
+                            .doFinally(signal -> log.info("✅ Download finished for repo={}, branch={} [signal={}]", repositoryPath, finalBranch, signal));
+                })
+                .doOnError(e -> log.error("❌ Failed to initialize download for id={}, branch={}, error={}", id, branch, e.getMessage(), e))
+                .doFinally(signal -> log.info("🟢 Transaction finished for downloadBranch(id={}, branch={}) [signal={}]", id, branch, signal));
     }
 
-    private String getBranch(RepositoryDto repositoryDto, String branch) {
-        if (Strings.isNotBlank(branch)) {
-            return branch;
-        }
-        return repositoryDto.getBranches()
-                .stream()
-                .filter(Branch::isDefaultBranch)
-                .map(Branch::getName)
-                .findFirst()
-                .orElse(repositoryDto.getSpecification().getBranches().stream()
-                        .filter(Branch::isDefaultBranch)
-                        .map(Branch::getName)
-                        .findFirst()
-                        .orElseThrow(() -> new CommonRuntimeException("Branch not found"))
-                );
-
-    }
 }

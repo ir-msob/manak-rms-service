@@ -15,6 +15,7 @@ import ir.msob.manak.core.service.jima.security.UserService;
 import ir.msob.manak.domain.model.rms.repository.Repository;
 import ir.msob.manak.domain.model.rms.repository.RepositoryCriteria;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
+import jakarta.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -37,7 +38,7 @@ import static ir.msob.jima.core.commons.operation.Operations.*;
 @Resource(value = Repository.DOMAIN_NAME_WITH_HYPHEN, type = ResourceType.RESTFUL)
 public class RepositoryRestResource extends DomainCrudRestResource<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository, RepositoryService> {
     public static final String BASE_URI = "/api/v1/" + Repository.DOMAIN_NAME_WITH_HYPHEN;
-    Logger log = LoggerFactory.getLogger(RepositoryRestResource.class);
+    private final Logger log = LoggerFactory.getLogger(RepositoryRestResource.class);
 
     protected RepositoryRestResource(UserService userService, RepositoryService service) {
         super(userService, service);
@@ -49,13 +50,13 @@ public class RepositoryRestResource extends DomainCrudRestResource<Repository, R
             @ApiResponse(code = 400, message = "If the validation operation is incorrect throws BadRequestException otherwise nothing", response = BadRequestResponse.class)})
     @Scope(operation = Operations.SAVE)
     @MethodStats
-    public ResponseEntity<Flux<DataBuffer>> downloadBranch(@PathVariable("id") String id, @PathVariable(value = "branch", required = false) String branch, Principal principal) {
-        log.debug("REST request to download branch {}, id {}", branch, id);
+    public ResponseEntity<Flux<DataBuffer>> downloadBranch(@PathVariable("id") String id, @PathVariable(value = "branch", required = false) @Nullable String branch, Principal principal) {
+        log.debug("REST request to download repository {}, branch {}", id, branch);
         User user = getUser(principal);
         Flux<DataBuffer> res = this.getService().downloadBranch(id, branch, user);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\""+branch+".zip\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + id + ".zip\"")
                 .body(res);
     }
 
