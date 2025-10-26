@@ -63,6 +63,7 @@ public class GithubProviderService implements GitProviderService {
                     log.debug("✅ [GitHub] File metadata received: name={}, encoding={}", response.getPath(), response.getEncoding());
                     String decoded = decodeContent(response.getContent(), response.getEncoding());
                     response.setContent(decoded);
+                    response.setEncoding(null);
                     return response;
                 })
                 .doOnSubscribe(s -> log.info("⬇️ [GitHub] Download started for file {}", filePath))
@@ -86,7 +87,7 @@ public class GithubProviderService implements GitProviderService {
         log.info("📦 [GitHub] Starting downloadBranch | repoPath={}, branch={}, user={}",
                 repositoryPath, branch, user.getUsername());
 
-        String apiUrl = String.format("%s/archive/refs/heads/%s.zip", repositoryPath, branch);
+        String apiUrl = String.format("%s/zipball/%s", repositoryPath, branch);
         log.debug("🔗 [GitHub] API URL: {}", apiUrl);
 
         return webClient

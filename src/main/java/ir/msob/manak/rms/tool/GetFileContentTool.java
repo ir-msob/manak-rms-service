@@ -117,7 +117,7 @@ public class GetFileContentTool implements ToolHandler {
         ToolParameter encodingParam = ToolParameter.builder()
                 .type("string")
                 .description("Encoding type (e.g., base64, utf-8)")
-                .required(true)
+                .required(false)
                 .example("base64")
                 .build();
 
