@@ -1,6 +1,9 @@
 package ir.msob.manak.rms.tool;
 
+import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
 import ir.msob.manak.core.model.jima.security.User;
+import ir.msob.manak.domain.model.rms.dto.FileContentBasicDto;
+import ir.msob.manak.domain.model.rms.dto.FileContentDto;
 import ir.msob.manak.domain.model.toolhub.ToolHandler;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
@@ -10,14 +13,19 @@ import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescri
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolParameter;
 import ir.msob.manak.rms.gitprovider.GitProviderHubService;
 import ir.msob.manak.rms.repository.RepositoryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class GetFileContentTool implements ToolHandler {
+    private static final Logger log = LoggerFactory.getLogger(GetFileContentTool.class);
 
     private final GitProviderHubService gitProviderHubService;
     private final RepositoryService repositoryService;
@@ -33,28 +41,28 @@ public class GetFileContentTool implements ToolHandler {
         // Input ToolParameters
         // -------------------------------
         ToolParameter toolIdParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("The tool ID")
                 .required(true)
                 .example("getFileContent")
                 .build();
 
         ToolParameter repositoryIdParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("Repository ID to fetch the file from")
                 .required(true)
-                .example("repo-123")
+                .example("123456")
                 .build();
 
         ToolParameter filePathParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("File path inside the repository")
                 .required(true)
                 .example("src/main/java/MyClass.java")
                 .build();
 
         ToolParameter branchParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("Optional branch name. Defaults to main if not provided")
                 .required(false)
                 .example("main")
@@ -73,56 +81,35 @@ public class GetFileContentTool implements ToolHandler {
         // Output ToolParameters (FileContentDto)
         // -------------------------------
         ToolParameter nameParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("The file name")
                 .required(true)
                 .example("MyClass.java")
                 .build();
 
         ToolParameter pathParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("The full path of the file")
                 .required(true)
                 .example("src/main/java/MyClass.java")
                 .build();
 
-        ToolParameter shaParam = ToolParameter.builder()
-                .type("string")
-                .description("SHA hash of the file content")
-                .required(true)
-                .example("abcd1234efgh5678")
-                .build();
-
         ToolParameter sizeParam = ToolParameter.builder()
-                .type("number")
+                .type(ToolParameter.ToolParameterType.NUMBER)
                 .description("File size in bytes")
                 .required(true)
                 .example(1024)
                 .build();
 
-        ToolParameter urlParam = ToolParameter.builder()
-                .type("string")
-                .description("Download URL of the file")
-                .required(true)
-                .example("https://repo.com/file/MyClass.java")
-                .build();
-
         ToolParameter contentParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("File content")
                 .required(true)
                 .example("public class MyClass { ... }")
                 .build();
 
-        ToolParameter encodingParam = ToolParameter.builder()
-                .type("string")
-                .description("Encoding type (e.g., base64, utf-8)")
-                .required(false)
-                .example("base64")
-                .build();
-
         ToolParameter errorParam = ToolParameter.builder()
-                .type("string")
+                .type(ToolParameter.ToolParameterType.STRING)
                 .description("Error message if the tool execution fails")
                 .required(false)
                 .example("File not found")
@@ -130,15 +117,17 @@ public class GetFileContentTool implements ToolHandler {
 
         ResponseSchema outputSchema = ResponseSchema.builder()
                 .toolId(toolIdParam)
-                .res(Map.of(
-                        "name", nameParam,
-                        "path", pathParam,
-                        "sha", shaParam,
-                        "size", sizeParam,
-                        "url", urlParam,
-                        "content", contentParam,
-                        "encoding", encodingParam
-                ))
+                .res(ToolParameter.builder()
+                        .type(ToolParameter.ToolParameterType.OBJECT)
+                        .description("File content details")
+                        .properties(Map.of(
+                                "name", nameParam,
+                                "path", pathParam,
+                                "size", sizeParam,
+                                "content", contentParam
+                        ))
+                        .required(true)
+                        .build())
                 .error(errorParam)
                 .build();
 
@@ -171,10 +160,37 @@ public class GetFileContentTool implements ToolHandler {
 
                     return gitProviderHubService.getProvider(repo)
                             .downloadFile(repoPath, branch, filePath, token, user)
+                            .map(this::decodeContent)
+                            .map(this::cast)
                             .map(content -> InvokeResponse.builder()
                                     .toolId(request.getToolId())
                                     .res(content)
                                     .build());
                 });
+    }
+
+
+    private FileContentDto decodeContent(FileContentDto dto) {
+        if ("base64".equals(dto.getEncoding()) && dto.getContent() != null) {
+            try {
+                byte[] decodedBytes = Base64.getDecoder().decode(dto.getContent().replace("\n", ""));
+                dto.setContent(new String(decodedBytes, StandardCharsets.UTF_8));
+                dto.setEncoding(null);
+            } catch (IllegalArgumentException e) {
+                log.error("⚠️ [GitHub] Failed to decode Base64 content: {}", e.getMessage());
+                throw new CommonRuntimeException("Failed to decode Base64 content");
+            }
+        }
+        return dto;
+    }
+
+    public FileContentBasicDto cast(FileContentDto dto) {
+        if (dto == null) return null;
+        return FileContentBasicDto.builder()
+                .name(dto.getName())
+                .path(dto.getPath())
+                .size(dto.getSize())
+                .content(dto.getContent())
+                .build();
     }
 }

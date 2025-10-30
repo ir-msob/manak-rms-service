@@ -61,9 +61,6 @@ public class GithubProviderService implements GitProviderService {
                 .bodyToMono(FileContentDto.class)
                 .map(response -> {
                     log.debug("✅ [GitHub] File metadata received: name={}, encoding={}", response.getPath(), response.getEncoding());
-                    String decoded = decodeContent(response.getContent(), response.getEncoding());
-                    response.setContent(decoded);
-                    response.setEncoding(null);
                     return response;
                 })
                 .doOnSubscribe(s -> log.info("⬇️ [GitHub] Download started for file {}", filePath))
@@ -113,18 +110,5 @@ public class GithubProviderService implements GitProviderService {
                 .doOnNext(buf -> log.trace("📄 [GitHub] Received data buffer chunk ({} bytes)", buf.readableByteCount()))
                 .doOnError(e -> log.error("❌ [GitHub] Error while downloading branch {}: {}", branch, e.getMessage(), e))
                 .doFinally(signal -> log.info("🔚 [GitHub] Finished downloadBranch for {} [signal={}]", branch, signal));
-    }
-
-    private String decodeContent(String content, String encoding) {
-        if ("base64".equals(encoding) && content != null) {
-            try {
-                byte[] decodedBytes = Base64.getDecoder().decode(content.replace("\n", ""));
-                return new String(decodedBytes, StandardCharsets.UTF_8);
-            } catch (IllegalArgumentException e) {
-                log.error("⚠️ [GitHub] Failed to decode Base64 content: {}", e.getMessage());
-                throw new CommonRuntimeException("Failed to decode Base64 content");
-            }
-        }
-        return content;
     }
 }
