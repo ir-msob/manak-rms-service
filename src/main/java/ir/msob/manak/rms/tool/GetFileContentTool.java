@@ -66,6 +66,7 @@ public class GetFileContentTool implements ToolHandler {
                 .description("Optional branch name. Defaults to main if not provided")
                 .required(false)
                 .example("main")
+                .defaultValue("main")
                 .build();
 
         RequestSchema inputSchema = RequestSchema.builder()
