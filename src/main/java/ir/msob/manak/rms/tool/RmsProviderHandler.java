@@ -19,7 +19,7 @@ public class RmsProviderHandler implements ToolProviderHandler {
         return ToolProviderDto.builder()
                 .name(appName)
                 .description("ToolProvider for application: " + appName)
-                .baseUrl(baseUrl)
+                .baseUrl(appName)
                 .endpoint("/api/v1/tool/invoke")
                 .build();
     }
