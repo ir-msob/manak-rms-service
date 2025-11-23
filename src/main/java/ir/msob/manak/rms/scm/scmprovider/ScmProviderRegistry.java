@@ -1,4 +1,4 @@
-package ir.msob.manak.rms.scmprovider;
+package ir.msob.manak.rms.scm.scmprovider;
 
 import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;

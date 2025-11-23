@@ -1,4 +1,4 @@
-package ir.msob.manak.rms.tool;
+package ir.msob.manak.rms.scm.tool;
 
 import ir.msob.manak.domain.model.toolhub.ToolProviderDescriptor;
 import ir.msob.manak.domain.model.toolhub.toolprovider.ToolProviderDto;

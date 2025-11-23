@@ -1,11 +1,9 @@
-package ir.msob.manak.rms.tool;
+package ir.msob.manak.rms.scm.tool;
 
 import ir.msob.manak.core.model.jima.security.User;
 import ir.msob.manak.domain.model.common.model.ParameterDescriptor;
 import ir.msob.manak.domain.model.common.model.RetryPolicy;
 import ir.msob.manak.domain.model.common.model.TimeoutPolicy;
-import ir.msob.manak.domain.model.rms.dto.BranchRef;
-import ir.msob.manak.domain.model.rms.dto.ScmContext;
 import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
@@ -15,8 +13,9 @@ import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseSt
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
 import ir.msob.manak.rms.repository.RepositoryService;
-import ir.msob.manak.rms.scmprovider.ScmProviderRegistry;
-import ir.msob.manak.rms.util.RepositoryUtil;
+import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
+import ir.msob.manak.rms.scm.scmprovider.ScmProviderRegistry;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,17 +35,14 @@ import java.util.Optional;
  * All exceptions are caught and transformed into structured {@link InvokeResponse.ErrorInfo} responses.
  */
 @Service
+@RequiredArgsConstructor
 public class GetFileContentTool implements ToolExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(GetFileContentTool.class);
 
-    private final ScmProviderRegistry gitProviderHubService;
+    private final ScmOperationService scmOperationService;
     private final RepositoryService repositoryService;
 
-    public GetFileContentTool(ScmProviderRegistry gitProviderHubService, RepositoryService repositoryService) {
-        this.gitProviderHubService = gitProviderHubService;
-        this.repositoryService = repositoryService;
-    }
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -167,29 +163,15 @@ public class GetFileContentTool implements ToolExecutor {
 
         log.info("🛠️ [{}] Fetching file content: repo={}, path={}, branch={}", toolId, repositoryId, filePath, branch);
 
-        return repositoryService.getOne(repositoryId, user)
-                .flatMap(repo -> {
-                    String repoPath = RepositoryUtil.getRepositoryPath(repo);
-                    String token = RepositoryUtil.getToken(repo);
-                    ScmContext ctx = ScmContext.builder()
-                            .repository(repoPath)
-                            .authToken(token)
+        return scmOperationService.readFile(repositoryId, branch, filePath, user)
+                .map(content -> {
+                    log.info("✅ [{}] Successfully fetched file '{}'", toolId, content.getPath());
+                    return InvokeResponse.builder()
+                            .id(requestId)
+                            .toolId(toolId)
+                            .result(content)
+                            .executedAt(Instant.now())
                             .build();
-                    BranchRef branchRef = BranchRef.builder()
-                            .name(branch)
-                            .build();
-
-                    return gitProviderHubService.getProvider(repo)
-                            .readFile(ctx, branchRef, filePath)
-                            .map(content -> {
-                                log.info("✅ [{}] Successfully fetched file '{}'", toolId, content.getPath());
-                                return InvokeResponse.builder()
-                                        .id(requestId)
-                                        .toolId(toolId)
-                                        .result(content)
-                                        .executedAt(Instant.now())
-                                        .build();
-                            });
                 })
                 .onErrorResume(e -> {
                     log.error("❌ [{}] Error during execution", toolId, e);
@@ -207,6 +189,4 @@ public class GetFileContentTool implements ToolExecutor {
                             .build());
                 });
     }
-
-
 }

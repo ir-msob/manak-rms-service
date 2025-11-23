@@ -1,9 +1,9 @@
-package ir.msob.manak.rms.scmprovider.github;
+package ir.msob.manak.rms.scm.scmprovider.github;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ir.msob.manak.domain.model.rms.dto.*;
-import ir.msob.manak.rms.scmprovider.ScmProviderService;
+import ir.msob.manak.rms.scm.scmprovider.ScmProviderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;

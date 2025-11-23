@@ -1,6 +1,8 @@
 package ir.msob.manak.rms.util;
 
 import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
+import ir.msob.manak.domain.model.rms.dto.BranchRef;
+import ir.msob.manak.domain.model.rms.dto.ScmContext;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
 import ir.msob.manak.domain.model.rms.repository.branch.Branch;
 import jakarta.annotation.Nullable;
@@ -35,5 +37,20 @@ public class RepositoryUtil {
 
     public static String getToken(RepositoryDto repositoryDto) {
         return repositoryDto.getSpecification().getToken();
+    }
+
+    public static ScmContext getScmContext(RepositoryDto repo) {
+        String repoPath = RepositoryUtil.getRepositoryPath(repo);
+        String token = RepositoryUtil.getToken(repo);
+        return ScmContext.builder()
+                .repository(repoPath)
+                .authToken(token)
+                .build();
+    }
+
+    public static BranchRef getBuild(String branch) {
+        return BranchRef.builder()
+                .name(branch)
+                .build();
     }
 }

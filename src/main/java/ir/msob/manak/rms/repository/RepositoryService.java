@@ -13,7 +13,7 @@ import ir.msob.manak.domain.model.rms.dto.ScmContext;
 import ir.msob.manak.domain.model.rms.repository.Repository;
 import ir.msob.manak.domain.model.rms.repository.RepositoryCriteria;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
-import ir.msob.manak.rms.scmprovider.ScmProviderRegistry;
+import ir.msob.manak.rms.scm.scmprovider.ScmProviderRegistry;
 import ir.msob.manak.rms.util.RepositoryUtil;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
