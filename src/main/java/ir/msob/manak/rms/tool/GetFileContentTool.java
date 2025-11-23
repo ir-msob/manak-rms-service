@@ -1,32 +1,36 @@
 package ir.msob.manak.rms.tool;
 
-import ir.msob.jima.core.commons.exception.runtime.CommonRuntimeException;
 import ir.msob.manak.core.model.jima.security.User;
-import ir.msob.manak.domain.model.rms.dto.FileContentBasicDto;
-import ir.msob.manak.domain.model.rms.dto.FileContentDto;
+import ir.msob.manak.domain.model.common.model.ParameterDescriptor;
+import ir.msob.manak.domain.model.common.model.RetryPolicy;
+import ir.msob.manak.domain.model.common.model.TimeoutPolicy;
+import ir.msob.manak.domain.model.rms.dto.BranchRef;
+import ir.msob.manak.domain.model.rms.dto.ScmContext;
 import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
-import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.*;
+import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example;
+import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor;
+import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus;
+import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.gitprovider.GitProviderHubService;
 import ir.msob.manak.rms.repository.RepositoryService;
+import ir.msob.manak.rms.scmprovider.ScmProviderRegistry;
+import ir.msob.manak.rms.util.RepositoryUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Reactive tool for fetching the content of a file from a Git repository.
  * <p>
- * This tool retrieves a file’s metadata and decoded content via {@link GitProviderHubService},
+ * This tool retrieves a file’s metadata and decoded content via {@link ScmProviderRegistry},
  * returning results in a consistent {@link InvokeResponse}.
  * <p>
  * All exceptions are caught and transformed into structured {@link InvokeResponse.ErrorInfo} responses.
@@ -36,10 +40,10 @@ public class GetFileContentTool implements ToolExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(GetFileContentTool.class);
 
-    private final GitProviderHubService gitProviderHubService;
+    private final ScmProviderRegistry gitProviderHubService;
     private final RepositoryService repositoryService;
 
-    public GetFileContentTool(GitProviderHubService gitProviderHubService, RepositoryService repositoryService) {
+    public GetFileContentTool(ScmProviderRegistry gitProviderHubService, RepositoryService repositoryService) {
         this.gitProviderHubService = gitProviderHubService;
         this.repositoryService = repositoryService;
     }
@@ -165,13 +169,18 @@ public class GetFileContentTool implements ToolExecutor {
 
         return repositoryService.getOne(repositoryId, user)
                 .flatMap(repo -> {
-                    String repoPath = gitProviderHubService.getRepositoryPath(repo);
-                    String token = gitProviderHubService.getToken(repo);
+                    String repoPath = RepositoryUtil.getRepositoryPath(repo);
+                    String token = RepositoryUtil.getToken(repo);
+                    ScmContext ctx = ScmContext.builder()
+                            .repository(repoPath)
+                            .authToken(token)
+                            .build();
+                    BranchRef branchRef = BranchRef.builder()
+                            .name(branch)
+                            .build();
 
                     return gitProviderHubService.getProvider(repo)
-                            .downloadFile(repoPath, branch, filePath, token, user)
-                            .map(this::decodeContent)
-                            .map(this::cast)
+                            .readFile(ctx, branchRef, filePath)
                             .map(content -> {
                                 log.info("✅ [{}] Successfully fetched file '{}'", toolId, content.getPath());
                                 return InvokeResponse.builder()
@@ -199,27 +208,5 @@ public class GetFileContentTool implements ToolExecutor {
                 });
     }
 
-    private FileContentDto decodeContent(FileContentDto dto) {
-        if ("base64".equalsIgnoreCase(dto.getEncoding()) && dto.getContent() != null) {
-            try {
-                byte[] decodedBytes = Base64.getDecoder().decode(dto.getContent().replace("\n", ""));
-                dto.setContent(new String(decodedBytes, StandardCharsets.UTF_8));
-                dto.setEncoding(null);
-                log.debug("🔍 Decoded Base64 content for file '{}'", dto.getPath());
-            } catch (IllegalArgumentException e) {
-                throw new CommonRuntimeException("Failed to decode Base64 content");
-            }
-        }
-        return dto;
-    }
 
-    private FileContentBasicDto cast(FileContentDto dto) {
-        if (dto == null) return null;
-        return FileContentBasicDto.builder()
-                .name(dto.getName())
-                .path(dto.getPath())
-                .size(dto.getSize())
-                .content(dto.getContent())
-                .build();
-    }
 }

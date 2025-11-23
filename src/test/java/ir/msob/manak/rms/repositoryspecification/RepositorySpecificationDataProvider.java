@@ -31,6 +31,7 @@ public class RepositorySpecificationDataProvider extends DomainCrudDataProvider<
 
     private static RepositorySpecificationDto newDto;
     private static RepositorySpecificationDto newMandatoryDto;
+
     protected RepositorySpecificationDataProvider(BaseIdService idService, ObjectMapper objectMapper, RepositorySpecificationService service) {
         super(idService, objectMapper, service);
     }

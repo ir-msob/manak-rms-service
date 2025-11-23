@@ -29,12 +29,12 @@ import static ir.msob.jima.core.test.CoreTestData.UPDATED_STRING;
 @Component
 public class GitSpecificationDataProvider extends DomainCrudDataProvider<GitSpecification, GitSpecificationDto, GitSpecificationCriteria, GitSpecificationRepository, GitSpecificationService> {
 
+    private static GitSpecificationDto newDto;
+    private static GitSpecificationDto newMandatoryDto;
+
     protected GitSpecificationDataProvider(BaseIdService idService, ObjectMapper objectMapper, GitSpecificationService service) {
         super(idService, objectMapper, service);
     }
-
-    private static GitSpecificationDto newDto;
-    private static GitSpecificationDto newMandatoryDto;
 
     /**
      * Creates a new DTO object with default values.

@@ -18,7 +18,7 @@ import static ir.msob.jima.core.commons.operation.Operations.*;
 @ConditionalOnOperation(operations = {SAVE, UPDATE_BY_ID, DELETE_BY_ID, EDIT_BY_ID, GET_BY_ID, GET_PAGE})
 @Resource(value = GitSpecification.DOMAIN_NAME_WITH_HYPHEN, type = ResourceType.RESTFUL)
 public class GitSpecificationRestResource extends DomainCrudRestResource<GitSpecification, GitSpecificationDto, GitSpecificationCriteria, GitSpecificationRepository, GitSpecificationService> {
-    public static final String BASE_URI = "/api/v1/" +GitSpecification.DOMAIN_NAME_WITH_HYPHEN;
+    public static final String BASE_URI = "/api/v1/" + GitSpecification.DOMAIN_NAME_WITH_HYPHEN;
 
     protected GitSpecificationRestResource(UserService userService, GitSpecificationService service) {
         super(userService, service);

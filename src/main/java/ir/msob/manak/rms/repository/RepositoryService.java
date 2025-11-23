@@ -8,10 +8,13 @@ import ir.msob.manak.core.model.jima.security.User;
 import ir.msob.manak.core.service.jima.crud.base.childdomain.ChildDomainCrudService;
 import ir.msob.manak.core.service.jima.crud.base.domain.DomainCrudService;
 import ir.msob.manak.core.service.jima.service.IdService;
+import ir.msob.manak.domain.model.rms.dto.BranchRef;
+import ir.msob.manak.domain.model.rms.dto.ScmContext;
 import ir.msob.manak.domain.model.rms.repository.Repository;
 import ir.msob.manak.domain.model.rms.repository.RepositoryCriteria;
 import ir.msob.manak.domain.model.rms.repository.RepositoryDto;
-import ir.msob.manak.rms.gitprovider.GitProviderHubService;
+import ir.msob.manak.rms.scmprovider.ScmProviderRegistry;
+import ir.msob.manak.rms.util.RepositoryUtil;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
@@ -30,13 +33,13 @@ import java.util.Collections;
 public class RepositoryService
         extends DomainCrudService<Repository, RepositoryDto, RepositoryCriteria, RepositoryRepository>
         implements ChildDomainCrudService<RepositoryDto> {
-    private final GitProviderHubService gitProviderHubService;
+    private final ScmProviderRegistry gitProviderHubService;
 
     private final ModelMapper modelMapper;
     private final IdService idService;
     private final Logger log = LoggerFactory.getLogger(RepositoryService.class);
 
-    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService, GitProviderHubService gitProviderHubService) {
+    protected RepositoryService(BeforeAfterComponent beforeAfterComponent, ObjectMapper objectMapper, RepositoryRepository repository, ModelMapper modelMapper, IdService idService, ScmProviderRegistry gitProviderHubService) {
         super(beforeAfterComponent, objectMapper, repository);
         this.modelMapper = modelMapper;
         this.idService = idService;
@@ -81,15 +84,21 @@ public class RepositoryService
 
         return getDto(id, user)
                 .flatMapMany(repositoryDto -> {
-                    String finalBranch = gitProviderHubService.getBranch(repositoryDto, branch);
-                    String repositoryPath = gitProviderHubService.getRepositoryPath(repositoryDto);
-                    String token = gitProviderHubService.getToken(repositoryDto);
-
+                    String finalBranch = RepositoryUtil.getBranch(repositoryDto, branch);
+                    String repositoryPath = RepositoryUtil.getRepositoryPath(repositoryDto);
+                    String token = RepositoryUtil.getToken(repositoryDto);
+                    ScmContext ctx = ScmContext.builder()
+                            .repository(repositoryPath)
+                            .authToken(token)
+                            .build();
+                    BranchRef branchRef = BranchRef.builder()
+                            .name(finalBranch)
+                            .build();
                     log.debug("📦 Repository info -> path={}, finalBranch={}, provider={}",
                             repositoryPath, finalBranch, repositoryDto.getSpecification().getName());
 
                     return gitProviderHubService.getProvider(repositoryDto)
-                            .downloadBranch(repositoryPath, finalBranch, token, user)
+                            .downloadArchive(ctx, branchRef)
                             .doOnSubscribe(s -> log.info("⬇️  Download started for repo={}, branch={}", repositoryPath, finalBranch))
                             .doOnNext(buffer -> log.trace("📄 Received data chunk of size={} bytes", buffer.readableByteCount()))
                             .doOnError(e -> log.error("❌ Error downloading branch {} from repo {}: {}", finalBranch, repositoryPath, e.getMessage(), e))
