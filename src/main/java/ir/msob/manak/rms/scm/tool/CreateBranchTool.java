@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,39 +30,99 @@ public class CreateBranchTool implements ToolExecutor {
 
     @Override
     public ToolDescriptor getToolDescriptor() {
+        // ==== Parameters ====
         ParameterDescriptor repositoryIdParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Repository ID")
+                .description("Repository ID where the new branch will be created")
                 .required(true)
                 .example("repo-001")
+                .nullable(false)
                 .build();
 
         ParameterDescriptor baseBranchParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Base branch")
+                .description("Existing base branch to create the new branch from")
                 .required(true)
                 .example("main")
+                .nullable(false)
                 .build();
 
         ParameterDescriptor newBranchParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("New branch name")
+                .description("Name of the new branch to be created")
                 .required(true)
                 .example("feature/x")
+                .nullable(false)
                 .build();
 
+        // ==== Response Schema ====
+        ParameterDescriptor responseSchema = ParameterDescriptor.builder()
+                .type(ParameterDescriptor.ToolParameterType.OBJECT)
+                .description("Details of the created branch")
+                .property("name", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("New branch name")
+                        .required(true)
+                        .build())
+                .property("createdAt", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Timestamp of branch creation")
+                        .required(true)
+                        .build())
+                .build();
+
+        // ==== ToolDescriptor ====
         return ToolDescriptor.builder()
                 .category("Repository")
                 .name("CreateBranch")
                 .displayName("Create Branch")
-                .description("Creates a new branch from a base branch")
+                .description("Creates a new branch from a specified base branch")
                 .version("1.0.0")
+                .tag("git")
+                .tag("branch")
                 .parameter("repositoryId", repositoryIdParam)
                 .parameter("baseBranch", baseBranchParam)
                 .parameter("newBranchName", newBranchParam)
+                .response(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor.builder()
+                        .responseSchema(responseSchema)
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("SUCCESS")
+                                .description("Branch created successfully")
+                                .contentType("application/json")
+                                .build())
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("ERROR")
+                                .description("An error occurred while creating the branch")
+                                .contentType("application/json")
+                                .build())
+                        .example(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example.builder()
+                                .title("Create branch example")
+                                .description("Creates a new branch 'feature/x' from 'main'")
+                                .input(Map.of(
+                                        "repositoryId", "repo-001",
+                                        "baseBranch", "main",
+                                        "newBranchName", "feature/x"))
+                                .output(Map.of(
+                                        "name", "feature/x",
+                                        "createdAt", "2025-11-23T23:00:00Z"))
+                                .build())
+                        .build())
+                .retryPolicy(ir.msob.manak.domain.model.common.model.RetryPolicy.builder()
+                        .enabled(true)
+                        .maxAttempts(3)
+                        .initialIntervalMs(500)
+                        .multiplier(2.0)
+                        .maxIntervalMs(2000)
+                        .build())
+                .timeoutPolicy(ir.msob.manak.domain.model.common.model.TimeoutPolicy.builder()
+                        .timeoutMs(5000)
+                        .failFast(false)
+                        .gracePeriodMs(1000)
+                        .build())
                 .status(ToolDescriptor.ToolDescriptorStatus.ACTIVE)
                 .build();
     }
+
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {

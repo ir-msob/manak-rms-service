@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,55 +30,137 @@ public class CreatePullRequestTool implements ToolExecutor {
 
     @Override
     public ToolDescriptor getToolDescriptor() {
+        // ==== Parameters ====
         ParameterDescriptor repositoryIdParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Repository ID")
+                .description("Repository ID where the pull request will be created")
                 .required(true)
                 .example("repo-001")
+                .nullable(false)
                 .build();
 
-        ParameterDescriptor sourceBranch = ParameterDescriptor.builder()
+        ParameterDescriptor sourceBranchParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Source branch")
+                .description("Source branch of the pull request")
                 .required(true)
                 .example("feature/x")
+                .nullable(false)
                 .build();
 
-        ParameterDescriptor targetBranch = ParameterDescriptor.builder()
+        ParameterDescriptor targetBranchParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Target branch")
+                .description("Target branch for merging the pull request")
                 .required(true)
                 .example("main")
+                .nullable(false)
                 .build();
 
-        ParameterDescriptor title = ParameterDescriptor.builder()
+        ParameterDescriptor titleParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("PR title")
+                .description("Title of the pull request")
                 .required(true)
                 .example("Add feature X")
+                .nullable(false)
                 .build();
 
-        ParameterDescriptor description = ParameterDescriptor.builder()
+        ParameterDescriptor descriptionParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("PR description")
+                .description("Optional description of the pull request")
                 .required(false)
                 .example("This PR introduces ...")
+                .nullable(true)
                 .build();
 
+        // ==== Response Schema ====
+        ParameterDescriptor responseSchema = ParameterDescriptor.builder()
+                .type(ParameterDescriptor.ToolParameterType.OBJECT)
+                .description("Details of the created pull request")
+                .property("id", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Pull request ID")
+                        .required(true)
+                        .build())
+                .property("title", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Pull request title")
+                        .required(true)
+                        .build())
+                .property("sourceBranch", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Source branch")
+                        .required(true)
+                        .build())
+                .property("targetBranch", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Target branch")
+                        .required(true)
+                        .build())
+                .property("status", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Pull request status")
+                        .required(true)
+                        .build())
+                .build();
+
+        // ==== ToolDescriptor ====
         return ToolDescriptor.builder()
                 .category("Repository")
                 .name("CreatePullRequest")
                 .displayName("Create Pull Request")
                 .description("Creates a pull/merge request from source to target branch")
                 .version("1.0.0")
+                .tag("git")
+                .tag("pull-request")
                 .parameter("repositoryId", repositoryIdParam)
-                .parameter("sourceBranch", sourceBranch)
-                .parameter("targetBranch", targetBranch)
-                .parameter("title", title)
-                .parameter("description", description)
+                .parameter("sourceBranch", sourceBranchParam)
+                .parameter("targetBranch", targetBranchParam)
+                .parameter("title", titleParam)
+                .parameter("description", descriptionParam)
+                .response(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor.builder()
+                        .responseSchema(responseSchema)
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("SUCCESS")
+                                .description("Pull request created successfully")
+                                .contentType("application/json")
+                                .build())
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("ERROR")
+                                .description("An error occurred while creating the pull request")
+                                .contentType("application/json")
+                                .build())
+                        .example(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example.builder()
+                                .title("Create Pull Request Example")
+                                .description("Creates a PR from feature/x to main branch")
+                                .input(Map.of(
+                                        "repositoryId", "repo-001",
+                                        "sourceBranch", "feature/x",
+                                        "targetBranch", "main",
+                                        "title", "Add feature X",
+                                        "description", "This PR introduces ..."))
+                                .output(Map.of(
+                                        "id", "42",
+                                        "title", "Add feature X",
+                                        "sourceBranch", "feature/x",
+                                        "targetBranch", "main",
+                                        "status", "OPEN"))
+                                .build())
+                        .build())
+                .retryPolicy(ir.msob.manak.domain.model.common.model.RetryPolicy.builder()
+                        .enabled(true)
+                        .maxAttempts(3)
+                        .initialIntervalMs(500)
+                        .multiplier(2.0)
+                        .maxIntervalMs(2000)
+                        .build())
+                .timeoutPolicy(ir.msob.manak.domain.model.common.model.TimeoutPolicy.builder()
+                        .timeoutMs(5000)
+                        .failFast(false)
+                        .gracePeriodMs(1000)
+                        .build())
                 .status(ToolDescriptor.ToolDescriptorStatus.ACTIVE)
                 .build();
     }
+
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {

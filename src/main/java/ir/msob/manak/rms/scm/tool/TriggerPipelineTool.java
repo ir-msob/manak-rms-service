@@ -31,31 +31,89 @@ public class TriggerPipelineTool implements ToolExecutor {
 
     @Override
     public ToolDescriptor getToolDescriptor() {
+        // ==== Parameters ====
         ParameterDescriptor repositoryIdParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Repository ID")
+                .description("Repository ID where the pipeline will be triggered")
                 .required(true)
                 .example("repo-001")
+                .nullable(false)
                 .build();
 
         ParameterDescriptor pipelineSpecParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.OBJECT)
-                .description("Pipeline specification object (provider specific)")
+                .description("Pipeline specification object (provider-specific)")
                 .required(true)
                 .example(Map.of("pipeline", "build-and-test"))
+                .nullable(false)
                 .build();
 
+        // ==== Response Schema ====
+        ParameterDescriptor responseSchema = ParameterDescriptor.builder()
+                .type(ParameterDescriptor.ToolParameterType.OBJECT)
+                .description("Result of pipeline trigger")
+                .property("pipelineId", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Triggered pipeline ID")
+                        .required(true)
+                        .build())
+                .property("status", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Pipeline status (e.g., triggered, running)")
+                        .required(true)
+                        .build())
+                .build();
+
+        // ==== ToolDescriptor ====
         return ToolDescriptor.builder()
                 .category("CI/CD")
                 .name("TriggerPipeline")
                 .displayName("Trigger CI/CD Pipeline")
-                .description("Triggers CI/CD pipeline for the repository")
+                .description("Triggers a CI/CD pipeline for the specified repository")
                 .version("1.0.0")
+                .tag("pipeline")
+                .tag("ci/cd")
                 .parameter("repositoryId", repositoryIdParam)
                 .parameter("spec", pipelineSpecParam)
+                .response(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor.builder()
+                        .responseSchema(responseSchema)
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("SUCCESS")
+                                .description("Pipeline triggered successfully")
+                                .contentType("application/json")
+                                .build())
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("ERROR")
+                                .description("Error occurred while triggering pipeline")
+                                .contentType("application/json")
+                                .build())
+                        .example(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example.builder()
+                                .title("Trigger Pipeline Example")
+                                .description("Triggers the build-and-test pipeline in repo-001")
+                                .input(Map.of(
+                                        "repositoryId", "repo-001",
+                                        "spec", Map.of("pipeline", "build-and-test")))
+                                .output(Map.of(
+                                        "pipelineId", "pipeline-123",
+                                        "status", "triggered"))
+                                .build())
+                        .build())
+                .retryPolicy(ir.msob.manak.domain.model.common.model.RetryPolicy.builder()
+                        .enabled(true)
+                        .maxAttempts(3)
+                        .initialIntervalMs(500)
+                        .multiplier(2.0)
+                        .maxIntervalMs(2000)
+                        .build())
+                .timeoutPolicy(ir.msob.manak.domain.model.common.model.TimeoutPolicy.builder()
+                        .timeoutMs(5000)
+                        .failFast(false)
+                        .gracePeriodMs(1000)
+                        .build())
                 .status(ToolDescriptor.ToolDescriptorStatus.ACTIVE)
                 .build();
     }
+
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {

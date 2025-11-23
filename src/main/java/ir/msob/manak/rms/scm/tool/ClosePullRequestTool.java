@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,31 +30,83 @@ public class ClosePullRequestTool implements ToolExecutor {
 
     @Override
     public ToolDescriptor getToolDescriptor() {
+        // ==== Parameters ====
         ParameterDescriptor repositoryIdParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Repository ID")
+                .description("Repository ID where the pull request exists")
                 .required(true)
                 .example("repo-001")
+                .nullable(false)
                 .build();
 
         ParameterDescriptor prIdParam = ParameterDescriptor.builder()
                 .type(ParameterDescriptor.ToolParameterType.STRING)
-                .description("Pull Request ID to close")
+                .description("ID of the pull request to close")
                 .required(true)
                 .example("42")
+                .nullable(false)
                 .build();
 
+        // ==== Response Schema ====
+        ParameterDescriptor responseSchema = ParameterDescriptor.builder()
+                .type(ParameterDescriptor.ToolParameterType.OBJECT)
+                .description("Result of closing the pull request")
+                .property("message", ParameterDescriptor.builder()
+                        .type(ParameterDescriptor.ToolParameterType.STRING)
+                        .description("Informational message about the operation")
+                        .required(true)
+                        .build())
+                .build();
+
+        // ==== ToolDescriptor ====
         return ToolDescriptor.builder()
                 .category("Repository")
                 .name("ClosePullRequest")
                 .displayName("Close Pull Request")
-                .description("Closes a pull request without merging")
+                .description("Closes a pull request without merging the changes")
                 .version("1.0.0")
+                .tag("git")
+                .tag("pull-request")
                 .parameter("repositoryId", repositoryIdParam)
                 .parameter("pullRequestId", prIdParam)
+                .response(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor.builder()
+                        .responseSchema(responseSchema)
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("SUCCESS")
+                                .description("Pull request closed successfully")
+                                .contentType("application/json")
+                                .build())
+                        .status(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus.builder()
+                                .status("ERROR")
+                                .description("An error occurred while closing the pull request")
+                                .contentType("application/json")
+                                .build())
+                        .example(ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example.builder()
+                                .title("Close pull request example")
+                                .description("Demonstrates closing a pull request in a repository")
+                                .input(Map.of(
+                                        "repositoryId", "repo-001",
+                                        "pullRequestId", "42"))
+                                .output(Map.of(
+                                        "message", "Pull request 42 has been successfully closed"))
+                                .build())
+                        .build())
+                .retryPolicy(ir.msob.manak.domain.model.common.model.RetryPolicy.builder()
+                        .enabled(true)
+                        .maxAttempts(3)
+                        .initialIntervalMs(500)
+                        .multiplier(2.0)
+                        .maxIntervalMs(2000)
+                        .build())
+                .timeoutPolicy(ir.msob.manak.domain.model.common.model.TimeoutPolicy.builder()
+                        .timeoutMs(5000)
+                        .failFast(false)
+                        .gracePeriodMs(1000)
+                        .build())
                 .status(ToolDescriptor.ToolDescriptorStatus.ACTIVE)
                 .build();
     }
+
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
