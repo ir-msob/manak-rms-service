@@ -44,7 +44,7 @@ public class ScmOperationService {
                 .flatMap(repo -> {
                     ScmContext ctx = RepositoryUtil.getScmContext(repo);
                     return scmProviderRegistry.getProvider(repo)
-                            .readFile(ctx, RepositoryUtil.getBuild(branch), filePath);
+                            .readFile(ctx, RepositoryUtil.getBranchRef(branch), filePath);
                 })
                 .onErrorResume(e -> handleError("Error in readFile()", e));
     }
@@ -55,7 +55,7 @@ public class ScmOperationService {
                 .flatMapMany(repo -> {
                     ScmContext ctx = RepositoryUtil.getScmContext(repo);
                     return scmProviderRegistry.getProvider(repo)
-                            .downloadArchive(ctx, RepositoryUtil.getBuild(branch));
+                            .downloadArchive(ctx, RepositoryUtil.getBranchRef(branch));
                 })
                 .onErrorResume(e -> handleErrorFlux("Error in downloadArchive()", e));
     }
@@ -66,7 +66,7 @@ public class ScmOperationService {
                 .flatMap(repo -> {
                     ScmContext ctx = RepositoryUtil.getScmContext(repo);
                     return scmProviderRegistry.getProvider(repo)
-                            .createBranch(ctx, RepositoryUtil.getBuild(baseBranch), newBranchName);
+                            .createBranch(ctx, RepositoryUtil.getBranchRef(baseBranch), newBranchName);
                 })
                 .onErrorResume(e -> handleError("Error in createBranch()", e));
     }
@@ -77,7 +77,7 @@ public class ScmOperationService {
                 .flatMap(repo -> {
                     ScmContext ctx = RepositoryUtil.getScmContext(repo);
                     return scmProviderRegistry.getProvider(repo)
-                            .deleteBranch(ctx, RepositoryUtil.getBuild(branch));
+                            .deleteBranch(ctx, RepositoryUtil.getBranchRef(branch));
                 })
                 .onErrorResume(e -> handleError("Error in deleteBranch()", e));
     }
@@ -94,7 +94,7 @@ public class ScmOperationService {
                 .flatMap(repo -> {
                     ScmContext ctx = RepositoryUtil.getScmContext(repo);
                     return scmProviderRegistry.getProvider(repo)
-                            .applyPatch(ctx, RepositoryUtil.getBuild(branch), patch, commitMessage);
+                            .applyPatch(ctx, RepositoryUtil.getBranchRef(branch), patch, commitMessage);
                 })
                 .onErrorResume(e -> handleError("Error in applyPatch()", e));
     }
@@ -114,8 +114,8 @@ public class ScmOperationService {
                     return scmProviderRegistry.getProvider(repo)
                             .createPullRequest(
                                     ctx,
-                                    RepositoryUtil.getBuild(sourceBranch),
-                                    RepositoryUtil.getBuild(targetBranch),
+                                    RepositoryUtil.getBranchRef(sourceBranch),
+                                    RepositoryUtil.getBranchRef(targetBranch),
                                     title,
                                     description
                             );

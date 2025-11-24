@@ -48,7 +48,7 @@ public class RepositoryUtil {
                 .build();
     }
 
-    public static BranchRef getBuild(String branch) {
+    public static BranchRef getBranchRef(String branch) {
         return BranchRef.builder()
                 .name(branch)
                 .build();
