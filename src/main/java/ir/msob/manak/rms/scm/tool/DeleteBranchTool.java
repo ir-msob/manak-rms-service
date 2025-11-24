@@ -6,8 +6,8 @@ import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,6 +19,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 
+import static ir.msob.manak.domain.model.rms.RmsConstants.BRANCH_KEY;
+import static ir.msob.manak.domain.model.rms.RmsConstants.REPOSITORY_ID_KEY;
+
 @Service
 @RequiredArgsConstructor
 public class DeleteBranchTool implements ToolExecutor {
@@ -26,7 +29,6 @@ public class DeleteBranchTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(DeleteBranchTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -116,16 +118,16 @@ public class DeleteBranchTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String branch = (String) request.getParameters().get("branch");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String branch = VariableUtils.safeString(request.getParameters().get(BRANCH_KEY));
 
         log.info("[{}] Deleting branch: repo={}, branch={}", toolId, repositoryId, branch);
 
         return scmOperationService.deleteBranch(repositoryId, branch, user)
                 .map(r -> InvokeResponse.builder()
-                        .id(requestId)
+                        .requestId(requestId)
                         .toolId(toolId)
                         .result(r)
                         .executedAt(Instant.now())
@@ -133,7 +135,7 @@ public class DeleteBranchTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("[{}] Error", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(request.getToolId())
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("DELETE_BRANCH_ERROR")

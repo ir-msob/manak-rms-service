@@ -6,8 +6,8 @@ import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 
+import static ir.msob.manak.domain.model.rms.RmsConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class CreateBranchTool implements ToolExecutor {
@@ -26,7 +28,6 @@ public class CreateBranchTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(CreateBranchTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -126,17 +127,17 @@ public class CreateBranchTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String baseBranch = (String) request.getParameters().get("baseBranch");
-        String newBranchName = (String) request.getParameters().get("newBranchName");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String baseBranch = VariableUtils.safeString(request.getParameters().get(BASE_BRANCH_KEY));
+        String newBranchName = VariableUtils.safeString(request.getParameters().get(NEW_BRANCH_NAME_KEY));
 
         log.info("[{}] Creating branch: repo={}, base={}, new={}", toolId, repositoryId, baseBranch, newBranchName);
 
         return scmOperationService.createBranch(repositoryId, baseBranch, newBranchName, user)
                 .map(b -> InvokeResponse.builder()
-                        .id(requestId)
+                        .requestId(requestId)
                         .toolId(toolId)
                         .result(b)
                         .executedAt(Instant.now())
@@ -144,7 +145,7 @@ public class CreateBranchTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("[{}] Error", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("CREATE_BRANCH_ERROR")

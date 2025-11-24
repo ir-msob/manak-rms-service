@@ -11,8 +11,8 @@ import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,6 +26,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import static ir.msob.manak.domain.model.rms.RmsConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class ApplyPatchTool implements ToolExecutor {
@@ -33,7 +35,6 @@ public class ApplyPatchTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(ApplyPatchTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -167,12 +168,12 @@ public class ApplyPatchTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String branch = (String) request.getParameters().get("branch");
-        String patchRaw = (String) request.getParameters().get("patch");
-        String commitMessage = (String) request.getParameters().get("commitMessage");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String branch = VariableUtils.safeString(request.getParameters().get(BRANCH_KEY));
+        String patchRaw = VariableUtils.safeString(request.getParameters().get(PATCH_KEY));
+        String commitMessage = VariableUtils.safeString(request.getParameters().get(COMMIT_MESSAGE_KEY));
 
         log.info("[{}] Applying patch: repo={}, branch={}", toolId, repositoryId, branch);
 
@@ -194,7 +195,7 @@ public class ApplyPatchTool implements ToolExecutor {
 
         return scmOperationService.applyPatch(repositoryId, branch, patch, commitMessage, user)
                 .map(r -> InvokeResponse.builder()
-                        .id(requestId)
+                        .requestId(requestId)
                         .toolId(toolId)
                         .result(r)
                         .executedAt(Instant.now())
@@ -202,7 +203,7 @@ public class ApplyPatchTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("[{}] Error applying patch", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("APPLY_PATCH_ERROR")

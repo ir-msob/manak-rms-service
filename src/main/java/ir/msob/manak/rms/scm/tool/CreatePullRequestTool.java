@@ -6,8 +6,8 @@ import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 
+import static ir.msob.manak.domain.model.rms.RmsConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class CreatePullRequestTool implements ToolExecutor {
@@ -26,7 +28,6 @@ public class CreatePullRequestTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(CreatePullRequestTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -164,19 +165,19 @@ public class CreatePullRequestTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String src = (String) request.getParameters().get("sourceBranch");
-        String tgt = (String) request.getParameters().get("targetBranch");
-        String title = (String) request.getParameters().get("title");
-        String description = (String) request.getParameters().get("description");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String src = VariableUtils.safeString(request.getParameters().get(SOURCE_BRANCH_KEY));
+        String tgt = VariableUtils.safeString(request.getParameters().get(TARGET_BRANCH_KEY));
+        String title = VariableUtils.safeString(request.getParameters().get(TITLE_KEY));
+        String description = VariableUtils.safeString(request.getParameters().get(DESCRIPTION_KEY));
 
         log.info("[{}] Creating PR: repo={}, {} -> {}", toolId, repositoryId, src, tgt);
 
         return scmOperationService.createPullRequest(repositoryId, src, tgt, title, description, user)
                 .map(pr -> InvokeResponse.builder()
-                        .id(requestId)
+                        .requestId(requestId)
                         .toolId(toolId)
                         .result(pr)
                         .executedAt(Instant.now())
@@ -184,7 +185,7 @@ public class CreatePullRequestTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("[{}] Error creating PR", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("CREATE_PR_ERROR")

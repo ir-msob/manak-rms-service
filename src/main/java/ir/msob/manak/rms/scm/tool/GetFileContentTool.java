@@ -11,8 +11,8 @@ import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.Example;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseDescriptor;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ResponseStatus;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import ir.msob.manak.rms.scm.scmprovider.ScmProviderRegistry;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +25,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+
+import static ir.msob.manak.domain.model.rms.RmsConstants.*;
 
 /**
  * Reactive tool for fetching the content of a file from a Git repository.
@@ -41,7 +43,6 @@ public class GetFileContentTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(GetFileContentTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
 
     @Override
@@ -155,11 +156,11 @@ public class GetFileContentTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String filePath = (String) request.getParameters().get("filePath");
-        String branch = Optional.ofNullable((String) request.getParameters().get("branch")).orElse("main");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String filePath = VariableUtils.safeString(request.getParameters().get(FILE_PATH_KEY));
+        String branch = Optional.ofNullable(VariableUtils.safeString(request.getParameters().get(BRANCH_KEY))).orElse("main");
 
         log.info("🛠️ [{}] Fetching file content: repo={}, path={}, branch={}", toolId, repositoryId, filePath, branch);
 
@@ -167,7 +168,7 @@ public class GetFileContentTool implements ToolExecutor {
                 .map(content -> {
                     log.info("✅ [{}] Successfully fetched file '{}'", toolId, content.getPath());
                     return InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .result(content)
                             .executedAt(Instant.now())
@@ -176,7 +177,7 @@ public class GetFileContentTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("❌ [{}] Error during execution", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("EXECUTION_ERROR")

@@ -7,7 +7,6 @@ import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
-import ir.msob.manak.rms.repository.RepositoryService;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -27,7 +26,6 @@ public class MergePullRequestTool implements ToolExecutor {
     private static final Logger log = LoggerFactory.getLogger(MergePullRequestTool.class);
 
     private final ScmOperationService scmOperationService;
-    private final RepositoryService repositoryService;
 
     @Override
     public ToolDescriptor getToolDescriptor() {
@@ -117,7 +115,7 @@ public class MergePullRequestTool implements ToolExecutor {
 
     @Override
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
-        String requestId = request.getId();
+        String requestId = request.getRequestId();
         String toolId = request.getToolId();
         String repositoryId = (String) request.getParameters().get("repositoryId");
         String prId = (String) request.getParameters().get("pullRequestId");
@@ -126,7 +124,7 @@ public class MergePullRequestTool implements ToolExecutor {
 
         return scmOperationService.mergePullRequest(repositoryId, prId, user)
                 .map(res -> InvokeResponse.builder()
-                        .id(requestId)
+                        .requestId(requestId)
                         .toolId(toolId)
                         .result(res)
                         .executedAt(Instant.now())
@@ -134,7 +132,7 @@ public class MergePullRequestTool implements ToolExecutor {
                 .onErrorResume(e -> {
                     log.error("[{}] Error merging PR", toolId, e);
                     return Mono.just(InvokeResponse.builder()
-                            .id(requestId)
+                            .requestId(requestId)
                             .toolId(toolId)
                             .error(InvokeResponse.ErrorInfo.builder()
                                     .code("MERGE_PR_ERROR")
