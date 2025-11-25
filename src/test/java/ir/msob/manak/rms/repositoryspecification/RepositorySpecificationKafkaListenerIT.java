@@ -21,19 +21,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(classes = {Application.class, ContainerConfiguration.class}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @CommonsLog
-public class RepositorySpecificationKafkaListenerIT
+class RepositorySpecificationKafkaListenerIT
         extends DomainCrudKafkaListenerTest<RepositorySpecification, RepositorySpecificationDto, RepositorySpecificationCriteria, RepositorySpecificationRepository, RepositorySpecificationService, RepositorySpecificationDataProvider>
         implements RepositorySpecificationTypeReference {
 
     @SneakyThrows
     @BeforeAll
-    public static void beforeAll() {
+    static void beforeAll() {
         CoreTestData.init(new ObjectId(), new ObjectId());
     }
 
     @SneakyThrows
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         getDataProvider().cleanups();
         RepositorySpecificationDataProvider.createMandatoryNewDto();
         RepositorySpecificationDataProvider.createNewDto();

@@ -6,6 +6,7 @@ import ir.msob.manak.domain.model.toolhub.ToolExecutor;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeRequest;
 import ir.msob.manak.domain.model.toolhub.dto.InvokeResponse;
 import ir.msob.manak.domain.model.toolhub.toolprovider.tooldescriptor.ToolDescriptor;
+import ir.msob.manak.domain.model.util.VariableUtils;
 import ir.msob.manak.domain.service.toolhub.util.ToolExecutorUtil;
 import ir.msob.manak.rms.scm.scmprovider.ScmOperationService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,9 @@ import reactor.core.publisher.Mono;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
+
+import static ir.msob.manak.domain.model.rms.RmsConstants.PULL_REQUEST_ID_KEY;
+import static ir.msob.manak.domain.model.rms.RmsConstants.REPOSITORY_ID_KEY;
 
 
 @Service
@@ -117,8 +121,9 @@ public class MergePullRequestTool implements ToolExecutor {
     public Mono<InvokeResponse> execute(InvokeRequest request, User user) {
         String requestId = request.getRequestId();
         String toolId = request.getToolId();
-        String repositoryId = (String) request.getParameters().get("repositoryId");
-        String prId = (String) request.getParameters().get("pullRequestId");
+        String repositoryId = VariableUtils.safeString(request.getParameters().get(REPOSITORY_ID_KEY));
+        String prId = VariableUtils.safeString(request.getParameters().get(PULL_REQUEST_ID_KEY));
+
 
         log.info("[{}] Merging PR: repo={}, prId={}", toolId, repositoryId, prId);
 
